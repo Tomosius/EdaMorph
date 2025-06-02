@@ -1,5 +1,10 @@
-from pydantic import BaseSettings
 import os
+
+from dotenv import load_dotenv
+from pydantic import BaseSettings
+
+load_dotenv()  # At the top of settings.py
+
 
 class Settings(BaseSettings):
     """
@@ -11,7 +16,7 @@ class Settings(BaseSettings):
     # ✅ App Info (Overrides from `.env`)
     APP_NAME: str = "EdaMorph"
     VERSION: str = "1.0.0"
-    DEBUG: bool = True  # Pydantic will auto-parse "true"/"false"
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
     # ✅ Server Config
     HOST: str = "127.0.0.1"
@@ -75,4 +80,3 @@ settings = Settings()
 settings.setup_duckdb_temp()
 
 print("🔥 FINAL SETTINGS:", settings.dict())
-

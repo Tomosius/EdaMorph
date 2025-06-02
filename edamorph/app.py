@@ -22,4 +22,10 @@ templates = Jinja2Templates(directory=settings.TEMPLATES_DIR)
 # ✅ Example route
 @app.get("/")
 async def index(request: Request):
-    return templates.TemplateResponse("base.html", {"request": request})
+    return templates.TemplateResponse(
+        "base.html",
+        {
+            "request": request,
+            "debug": settings.DEBUG  # ✅ Pass DEBUG into Jinja context
+        }
+    )
