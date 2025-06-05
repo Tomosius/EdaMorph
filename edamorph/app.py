@@ -6,8 +6,14 @@ from fastapi.templating import Jinja2Templates
 from edamorph.settings import settings  # ✅ App config
 
 # ✅ Create the FastAPI app instance
-app = FastAPI(title="EdaMorph", version="1.0.0")
-
+app = FastAPI(
+    title="EdaMorph",
+    description="Exploratory Data Analysis API",
+    version="0.1.0",
+    docs_url="/docs",         # Swagger UI path
+    redoc_url="/redoc",       # ReDoc path (can change it)
+    openapi_url="/openapi.json"  # OpenAPI schema path
+)
 # ✅ Static files mounting
 app.mount(
     settings.STATIC_URL,

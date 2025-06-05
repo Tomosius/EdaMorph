@@ -1,12 +1,20 @@
-// edamorph/frontend/src/ts/main.ts
-
-// ✅ Tailwind and custom styles
+// ✅ Ensure Alpine loads before anything else
+import Alpine from 'alpinejs';
+import 'htmx.org';
 import '../css/input.css';
 import '../css/custom.css';
+import './custom_typescript';
 
-// ✅ Import HTMX — will be bundled in production
-import 'htmx.org';
+declare global {
+  interface Window {
+    Alpine: typeof Alpine;
+  }
+}
 
-console.log('✅ App initialized with Tailwind + HTMX');
+window.Alpine = Alpine;
 
-import './custom_typescript'
+// ✅ DOM must be ready before Alpine initializes
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('✅ App initialized with Tailwind + HTMX + Alpine');
+  Alpine.start(); // ✅ Start inside DOMContentLoaded
+});

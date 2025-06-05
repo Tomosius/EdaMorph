@@ -6,6 +6,8 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.8",
+    "@types/alpinejs": "^3.13.11",
+    "alpinejs": "^3.14.9",
     "htmx.org": "^1.9.12",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",
