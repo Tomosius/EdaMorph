@@ -1,7 +1,0 @@
-{
-    "duckdb": {
-        "use_in_memory": true,
-        "db_file_path": "/Users/tomaspecukevicius/PycharmProjects/EdaMorph/edamorph/db/edamorph.db",
-        "temp_directory": "/Users/tomaspecukevicius/PycharmProjects/EdaMorph/edamorph/db/temp"
-    }
-}
