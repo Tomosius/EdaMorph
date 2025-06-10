@@ -4,15 +4,15 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from edamorph.settings import settings, logger  # ✅ Import logger explicitly
+from edamorph.settings import settings, logger
 from edamorph.routes import router as core_router
 from edamorph.duckdb.connection import DuckDBConnection
 
 # ✅ Create FastAPI instance
 app = FastAPI(
-    title="EdaMorph",
+    title=settings.APP_NAME,
     description="Exploratory Data Analysis API",
-    version="0.1.0",
+    version=settings.VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json"
