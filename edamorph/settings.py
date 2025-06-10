@@ -1,82 +1,51 @@
+# edamorph/settings.py
+
 import os
-
+import logging
+from typing import List
+import msgspec
 from dotenv import load_dotenv
-from pydantic import BaseSettings
 
-load_dotenv()  # At the top of settings.py
+load_dotenv()
+
+# ✅ Logger configuration
+logging.basicConfig(
+    level=logging.DEBUG if os.getenv("DEBUG", "false").lower() == "true" else logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("edamorph")
 
 
-class Settings(BaseSettings):
-    """
-    ✅ Manages app configuration, loading values from `.env` when available.
-    - Defaults ensure the app runs even without `.env`.
-    - Automatically type-converts values (e.g., `PORT` → int, `DEBUG` → bool).
-    """
-
-    # ✅ App Info (Overrides from `.env`)
-    APP_NAME: str = "EdaMorph"
-    VERSION: str = "1.0.0"
+class Settings(msgspec.Struct, frozen=True):
+    APP_NAME: str = os.getenv("APP_NAME", "EdaMorph")
+    VERSION: str = os.getenv("VERSION", "1.0.0")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
-    # ✅ Server Config
-    HOST: str = "127.0.0.1"
-    PORT: int = 8000  # Pydantic auto-converts string to int
+    HOST: str = os.getenv("HOST", "127.0.0.1")
+    PORT: int = int(os.getenv("PORT", 8000))
 
-    # ✅ Base Paths
-    BASE_DIR: str = os.path.dirname(os.path.abspath(__file__))  # Project root
+    BASE_DIR: str = os.path.dirname(os.path.abspath(__file__))
     EXECUTION_PATH: str = os.getcwd()
 
-    # ✅ Static & Templates
     STATIC_URL: str = "/static"
     STATIC_DIR: str = os.path.join(BASE_DIR, "frontend/assets")
     TEMPLATES_DIR: str = os.path.join(BASE_DIR, "frontend/templates")
 
-    # ✅ Database (Uses .env to allow overrides)
-    DATABASE_URL: str = ":memory:"  # Default is in-memory
+    DB_DIR: str = os.path.join(BASE_DIR, "db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", ":memory:")
 
-    def __init__(self, **kwargs):
-        """
-        ✅ Runs after settings are loaded from `.env`.
-        - Ensures `DATABASE_URL` is an absolute path if not `:memory:`.
-        """
-        super().__init__(**kwargs)
+    DUCKDB_TEMP_DIR: str = os.getenv(
+        "DUCKDB_TEMP_DIR", os.path.join(DB_DIR, "temp")
+    )
 
-        # ✅ Ensure DATABASE_URL is absolute if it's a file
-        if self.DATABASE_URL != ":memory:":
-            self.DATABASE_URL = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), self.DATABASE_URL)
-            )
-
-        print(f"🔍 DATABASE_URL resolved to: {self.DATABASE_URL}")
-
-    # ✅ DuckDB Temp File
-    CUSTOM_TEMP_PATH: str = ""
-    DUCKDB_TEMP_DIR: str = ""
-
-    def setup_duckdb_temp(self):
-        """
-        ✅ Determines the correct temp directory for DuckDB.
-        - Uses `CUSTOM_TEMP_PATH` if defined.
-        - Otherwise, defaults to a project-based temp file.
-        """
-        self.DUCKDB_TEMP_DIR = (
-            self.CUSTOM_TEMP_PATH if self.CUSTOM_TEMP_PATH
-            else os.path.join(self.EXECUTION_PATH, f"edamorph_tmp_{os.path.basename(self.EXECUTION_PATH)}.db")
-        )
-
-    # ✅ CORS Settings (Overridable via .env)
-    ALLOW_ORIGINS: list[str] = ["*"]
     ALLOW_CREDENTIALS: bool = True
-    ALLOW_METHODS: list[str] = ["*"]
-    ALLOW_HEADERS: list[str] = ["*"]
-
-    class Config:
-        env_file = os.path.join(os.path.dirname(__file__), ".env")
-        env_file_encoding = 'utf-8'
+    ALLOW_ORIGINS: List[str] = msgspec.field(default_factory=lambda: ["*"])
+    ALLOW_METHODS: List[str] = msgspec.field(default_factory=lambda: ["*"])
+    ALLOW_HEADERS: List[str] = msgspec.field(default_factory=lambda: ["*"])
 
 
-# ✅ Create global settings instance
 settings = Settings()
-settings.setup_duckdb_temp()
 
-print("🔥 FINAL SETTINGS:", settings.dict())
+# Ensure directories exist
+os.makedirs(settings.DB_DIR, exist_ok=True)
+os.makedirs(settings.DUCKDB_TEMP_DIR, exist_ok=True)

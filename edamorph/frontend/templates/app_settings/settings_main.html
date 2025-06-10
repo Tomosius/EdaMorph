@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-6 rounded shadow">
+  <h2 class="text-lg font-bold mb-4">⚙️ App Settings</h2>
+  <ul class="space-y-2 text-sm text-gray-700">
+    <li><strong>Database URL:</strong> settings.DATABASE_URL </li>
+    <li><strong>Debug Mode:</strong> settings.DEBUG </li>
+    <li><strong>Execution Path:</strong> settings.EXECUTION_PATH </li>
+    <li><strong>DuckDB Temp File:</strong> settings.DUCKDB_TEMP_DIR </li>
+    <!-- Add more as needed -->
+  </ul>
+</div>
+{% endblock %}

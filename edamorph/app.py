@@ -3,35 +3,54 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from edamorph.settings import settings  # ✅ App config
 
-# ✅ Create the FastAPI app instance
+from edamorph.settings import settings, logger  # ✅ Import logger explicitly
+from edamorph.routes import router as core_router
+from edamorph.duckdb.connection import DuckDBConnection
+
+# ✅ Create FastAPI instance
 app = FastAPI(
     title="EdaMorph",
     description="Exploratory Data Analysis API",
     version="0.1.0",
-    docs_url="/docs",         # Swagger UI path
-    redoc_url="/redoc",       # ReDoc path (can change it)
-    openapi_url="/openapi.json"  # OpenAPI schema path
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
-# ✅ Static files mounting
+
+# ✅ Mount static files
 app.mount(
     settings.STATIC_URL,
     StaticFiles(directory=settings.STATIC_DIR),
     name="static"
 )
 
-# ✅ Jinja2 templates config
+# ✅ Include centralized router
+app.include_router(core_router)
+
+# ✅ Jinja2 templates setup
 templates = Jinja2Templates(directory=settings.TEMPLATES_DIR)
 
+# ✅ Startup event for DuckDB initialization
+@app.on_event("startup")
+async def startup_event():
+    app.state.db = DuckDBConnection().get_connection()
+    logger.info("🚀 DuckDB connection initialized at startup.")
 
-# ✅ Example route
+# ✅ Shutdown event for DuckDB connection closure
+@app.on_event("shutdown")
+async def shutdown_event():
+    if hasattr(app.state, 'db'):
+        DuckDBConnection().close()
+        logger.info("🛑 DuckDB connection closed at shutdown.")
+
+# ✅ Root endpoint
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse(
         "base.html",
         {
             "request": request,
-            "debug": settings.DEBUG  # ✅ Pass DEBUG into Jinja context
+            "debug": settings.DEBUG
         }
     )
