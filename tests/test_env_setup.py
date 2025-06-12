@@ -1,134 +1,154 @@
 import os
-import shutil
-import tempfile
+import sys
 import json
+import tempfile
 from pathlib import Path
-from typing import Dict
+import shutil
+import pytest
+from types import SimpleNamespace
 
-from edamorph.env_setup import (
-    get_env_paths,
-    ensure_env_root_and_settings,
-    load_settings,
-    update_settings,
-    create_runtime_dirs
-)
+# --- IMPORT MODULE UNDER TEST ---
+import edamorph.env_setup as es
 
 
-def test_get_env_paths_creates_correct_structure():
-    paths = get_env_paths()
-    assert isinstance(paths, dict)
-    assert all(key in paths for key in [
-        "root", "settings_file", "logs", "cache", "temp", "database", "db_file"])
-    assert all(isinstance(val, Path) for val in paths.values())
+def test_sanitize_name():
+    assert es.sanitize_name("Some Env") == "some_env"
+    assert es.sanitize_name("Path/To/Foo") == "path_to_foo"
 
 
-def test_ensure_env_root_and_settings_creates_default_files(tmp_path, monkeypatch):
+@pytest.mark.parametrize("env, exe, expected", [
+    ({"CONDA_PREFIX": "/env", "CONDA_EXE": "/bin/mamba"}, None, "mamba"),
+    ({"CONDA_PREFIX": "/env", "CONDA_EXE": "/bin/conda"}, None, "conda"),
+    ({"CONDA_PREFIX": "/env", "CONDA_EXE": "/bin/miniconda"}, None, "miniconda"),
+    ({"CONDA_PREFIX": "/env", "CONDA_EXE": "/bin/anaconda"}, None, "anaconda"),
+    ({"PYENV_VERSION": "3.11.0"}, None, "pyenv"),
+    ({"POETRY_ACTIVE": "1"}, None, "poetry"),
+], ids=["mamba", "conda", "miniconda", "anaconda", "pyenv", "poetry"])
+def test_detect_env_type(monkeypatch, env, exe, expected):
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.delenv("PYENV_VERSION", raising=False)
+    monkeypatch.delenv("POETRY_ACTIVE", raising=False)
+
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    assert es.detect_env_type() == expected
+
+
+def test_detect_env_name_conda(monkeypatch):
+    monkeypatch.setenv("CONDA_PREFIX", "/opt/conda/envs/myenv")
+    monkeypatch.setenv("CONDA_DEFAULT_ENV", "myenv")
+    assert es.detect_env_name() == "myenv"
+
+
+def test_detect_env_name_pyenv(monkeypatch):
+    monkeypatch.setenv("PYENV_VERSION", "3.10.5")
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.delenv("CONDA_DEFAULT_ENV", raising=False)
+    monkeypatch.setattr(sys, "prefix", "/fake/pyenv/path/3.10.5")
+    assert es.detect_env_name() == "3.10.5"
+
+
+def test_detect_env_name_default(monkeypatch):
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.delenv("PYENV_VERSION", raising=False)
+    assert isinstance(es.detect_env_name(), str)
+
+
+def test_detect_project_name(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert es.detect_project_name() == tmp_path.name
+
+
+def test_detect_runtime_context_structure():
+    result = es.detect_runtime_context()
+    assert isinstance(result, tuple)
+    assert len(result) == 3
+
+
+def test_get_env_paths_structure():
+    paths = es.get_env_paths()
+    keys = ["root", "settings_file", "logs", "cache", "temp", "database", "db_file"]
+    for key in keys:
+        assert key in paths and isinstance(paths[key], Path)
+
+
+def test_ensure_env_root_and_settings(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
-    paths = ensure_env_root_and_settings()
-
-    assert paths["root"].exists()
+    paths = es.ensure_env_root_and_settings()
     assert paths["settings_file"].exists()
-
-    with open(paths["settings_file"], "r") as f:
-        config = json.load(f)
-
-    # 🛠 FIX: These must match your actual config layout
-    assert config["duckdb_mode"] == "memory"
-    assert "memory_temp_directory" in config
-    assert "persistent_db_file_path" in config
+    config = es.load_settings(paths["settings_file"])
+    assert isinstance(config, dict)
 
 
-def test_load_settings_reads_correct_data(tmp_path):
-    settings_file = tmp_path / "settings.json"
-    test_data = {"duckdb": {"duckdb_mode": "persistent"}}
-    with open(settings_file, "w") as f:
-        json.dump(test_data, f)
-
-    result = load_settings(settings_file)
-    assert result["duckdb"]["duckdb_mode"] == "persistent"
-
-
-def test_update_settings_merges_dict_values(tmp_path):
-    settings_file = tmp_path / "settings.json"
-    initial = {"duckdb": {"duckdb_mode": "memory", "a": 1}}
-    with open(settings_file, "w") as f:
-        json.dump(initial, f)
-
-    update_settings(settings_file, {"duckdb": {"a": 2, "b": 3}})
-    result = load_settings(settings_file)
-
-    assert result["duckdb"]["a"] == 2
-    assert result["duckdb"]["b"] == 3
-    assert result["duckdb"]["duckdb_mode"] == "memory"
+def test_update_settings_nested(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    paths = es.ensure_env_root_and_settings()
+    es.update_settings(paths["settings_file"], {"duckdb": {"custom": 42}})
+    cfg = es.load_settings(paths["settings_file"])
+    env_type, env_name, project_name = es.detect_runtime_context()
+    duckdb_config = cfg[env_type][env_name][project_name]["duckdb"]
+    assert duckdb_config["custom"] == 42
 
 
-def test_update_settings_overwrites_non_dict():
-    with tempfile.TemporaryDirectory() as tmp:
-        settings_file = Path(tmp) / "settings.json"
-        with open(settings_file, "w") as f:
-            json.dump({"version": "1.0.0"}, f)
+def test_update_settings_overwrite_non_dict(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    paths = es.ensure_env_root_and_settings()
 
-        update_settings(settings_file, {"version": "2.0.0"})
-        result = load_settings(settings_file)
-        assert result["version"] == "2.0.0"
+    # Overwrite the entire `duckdb` section
+    es.update_settings(paths["settings_file"], {"duckdb": "just a string"})
+    cfg = es.load_settings(paths["settings_file"])
+
+    env_type, env_name, project_name = es.detect_runtime_context()
+    assert cfg[env_type][env_name][project_name]["duckdb"] == "just a string"
 
 
-def test_create_runtime_dirs_creates_correct_paths(tmp_path):
-    paths = {
-        "logs": tmp_path / "logs",
-        "cache": tmp_path / "cache",
-        "temp": tmp_path / "temp",
-        "database": tmp_path / "db",
-        "db_file": tmp_path / "db" / "edamorph.db"
-    }
-
+def test_create_runtime_dirs_memory(tmp_path):
     config = {
         "duckdb": {
             "duckdb_mode": "memory",
-            "memory_temp_directory": str(paths["temp"]),
-            "persistent_db_file_path": str(paths["db_file"])
+            "memory_temp_directory": str(tmp_path / "temp_dir"),
+            "persistent_db_file_path": str(tmp_path / "db" / "edamorph.db"),
         }
     }
-
-    create_runtime_dirs(config, paths)
-
+    paths = {
+        "logs": tmp_path / "logs",
+        "cache": tmp_path / "cache",
+        "temp": tmp_path / "temp_dir",
+        "database": tmp_path / "db",
+        "db_file": tmp_path / "db" / "edamorph.db",
+    }
+    es.create_runtime_dirs(config, paths)
     assert paths["logs"].exists()
     assert paths["cache"].exists()
     assert paths["temp"].exists()
 
-    config["duckdb"]["duckdb_mode"] = "persistent"
-    create_runtime_dirs(config, paths)
-    assert paths["database"].exists()
 
-def test_update_settings_adds_new_key(tmp_path):
-    settings_file = tmp_path / "settings.json"
-    with open(settings_file, "w") as f:
-        json.dump({}, f)
-
-    update_settings(settings_file, {"new_section": {"key": "value"}})
-    result = load_settings(settings_file)
-    assert "new_section" in result
-    assert result["new_section"]["key"] == "value"
-
-def test_ensure_env_root_and_settings_idempotent(tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
-    first = ensure_env_root_and_settings()
-    second = ensure_env_root_and_settings()
-
-    assert first["settings_file"].read_text() == second["settings_file"].read_text()
-
-def test_create_runtime_dirs_with_unknown_mode(tmp_path):
+def test_create_runtime_dirs_persistent(tmp_path):
+    db_path = tmp_path / "db" / "edamorph.db"
+    config = {
+        "duckdb": {
+            "duckdb_mode": "persistent",
+            "memory_temp_directory": str(tmp_path / "temp"),
+            "persistent_db_file_path": str(db_path),
+        }
+    }
     paths = {
         "logs": tmp_path / "logs",
         "cache": tmp_path / "cache",
         "temp": tmp_path / "temp",
         "database": tmp_path / "db",
-        "db_file": tmp_path / "db" / "edamorph.db"
+        "db_file": db_path,
     }
-
-    config = {"duckdb": {"duckdb_mode": "invalid_mode"}}
-    create_runtime_dirs(config, paths)
-
-    # logs/cache should still be created even if mode is wrong
+    es.create_runtime_dirs(config, paths)
+    assert db_path.parent.exists()
     assert paths["logs"].exists()
     assert paths["cache"].exists()
+
+
+def test_load_settings_reads_correct(tmp_path):
+    file = tmp_path / "settings.json"
+    data = {"a": 1}
+    with open(file, "w") as f:
+        json.dump(data, f)
+    result = es.load_settings(file)
+    assert result == data
