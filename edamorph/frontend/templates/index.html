@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if dataset_loaded %}
+  <div class="mb-4">
+    <p>
+      <strong>Current dataset:</strong> {{ dataset_name }}<br>
+      <strong>Shape:</strong>
+      {% if dataset_shape %}
+        {{ dataset_shape[0] }} rows × {{ dataset_shape[1] }} columns
+      {% endif %}
+    </p>
+    <h3 class="mt-2 font-semibold">Preview:</h3>
+    <div class="overflow-x-auto bg-white rounded shadow p-2">
+      <!-- Arrow/JS table will be rendered here via main.ts -->
+      <div id="arrow-table-preview"></div>
+    </div>
+  </div>
+{% else %}
+  <div class="bg-yellow-100 p-4 rounded border border-yellow-300 mb-4">
+    No dataset loaded. Please import a CSV, Parquet, or Arrow file.
+  </div>
+{% endif %}
+{% endblock %}

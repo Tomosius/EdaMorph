@@ -2,6 +2,7 @@
 Index Page Views for EdaMorph
 -----------------------------
 Renders the main index.html, showing dataset info if loaded.
+Front-end JS will request Arrow preview for table rendering.
 """
 
 from fastapi import APIRouter, Request
@@ -17,25 +18,34 @@ templates = Jinja2Templates(directory=settings.TEMPLATES_DIR)
 async def index(request: Request):
     """
     Renders the index page with dataset summary if loaded.
+    Data table is rendered in the browser from Arrow IPC via JavaScript.
     """
     dataset_loaded = session_state.df is not None
+    df = session_state.df
+
+    # Build a minimal context (for Jinja, not the data preview itself)
     context = {
         "request": request,
         "dataset_loaded": dataset_loaded,
         "dataset_name": session_state.df_name,
         "dataset_shape": None,
-        "dataset_preview": None,
+        "column_names": None,
+        # No dataset_preview, JS will handle via /arrow_preview endpoint
     }
+
+    # Populate shape & columns for header/info if available
     if dataset_loaded:
-        # For eager: use head(). For lazy: need to collect().
-        df = session_state.df
-        if session_state.lazy:
-            preview_df = df.head(5).collect().to_pandas()
-            shape = df.schema
-        else:
-            preview_df = df.head(5).to_pandas()
-            shape = df.shape
-        context["dataset_shape"] = shape
-        context["dataset_preview"] = preview_df.to_html(classes="table table-sm table-striped", index=False)
+        try:
+            # Use Arrow conversion for column names and shape (universal for all DF types)
+            from edamorph.core.input_output.utils import to_arrow_table
+            arrow_tbl = to_arrow_table(df)
+            context["dataset_shape"] = (arrow_tbl.num_rows, arrow_tbl.num_columns)
+            context["column_names"] = [field.name for field in arrow_tbl.schema]
+        except Exception:
+            # Fallback for older/unknown types
+            if hasattr(df, "columns"):
+                context["column_names"] = list(df.columns)
+            if hasattr(df, "shape"):
+                context["dataset_shape"] = df.shape
 
     return templates.TemplateResponse("index.html", context)
