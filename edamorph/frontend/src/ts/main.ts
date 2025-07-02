@@ -1,11 +1,8 @@
 // main.ts
 
-// ✅ Ensure Alpine loads before anything else
 import Alpine from 'alpinejs';
-
-// Arrow Table (Apache Arrow)
 import { fetchArrowTable, renderArrowTable } from './tableRenderer';
-
+import { datasetImportComponent } from './datasetImportComponent';
 import 'htmx.org';
 import '../css/input.css';
 import '../css/custom.css';
@@ -19,12 +16,14 @@ declare global {
 
 window.Alpine = Alpine;
 
-// ✅ DOM must be ready before Alpine initializes and table preview renders
+// Register Alpine component
+Alpine.data("datasetImportComponent", datasetImportComponent);
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ App initialized with Tailwind + HTMX + Alpine');
   Alpine.start();
 
-  // 👇 Table preview: only runs if preview div is present!
+  // Render table preview if the div is present
   const previewDiv = document.getElementById("arrow-table-preview");
   if (previewDiv) {
     fetchArrowTable("/arrow_preview")

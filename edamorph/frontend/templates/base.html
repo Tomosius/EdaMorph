@@ -1,27 +1,31 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-  <meta name="description" content="EdaMorph: Fast, powerful data EDA in your browser." />
-  <meta name="theme-color" content="#18181b">
-  <link rel="icon" href="/favicon.ico" />
+    <!-- ==== META & HEAD SECTION ==== -->
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <meta name="description" content="EdaMorph: Fast, powerful data EDA in your browser."/>
+    <meta name="theme-color" content="#18181b">
+    <link rel="icon" href="/favicon.ico"/>
 
-  <!-- 🛠 Development: Load Vite dev server -->
-  <script type="module" src="http://localhost:5173/edamorph/frontend/src/ts/main.ts"></script>
+    <!-- ==== ASSETS (Dev/Prod) ==== -->
 
-  <!-- 🚀 Production assets (uncomment for production) -->
-  {#
-  <script type="module" src="{{ url_for('static', path='dist/assets/main.js') }}"></script>
-  <link rel="stylesheet" href="{{ url_for('static', path='dist/assets/main.css') }}">
-  #}
+    <!-- 🛠 Development: Load Vite dev server JS (hot reload) -->
+    <script type="module" src="http://localhost:5173/edamorph/frontend/src/ts/main.ts"></script>
 
-  <title>{% block title %}EdaMorph{% endblock %}</title>
+    <!-- 🚀 Production assets (uncomment for prod build) -->
+    {#
+    <script type="module" src="{{ url_for('static', path='dist/assets/main.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', path='dist/assets/main.css') }}">
+    #}
+
+    <!-- ==== PAGE TITLE ==== -->
+    <title>{% block title %}EdaMorph{% endblock %}</title>
 </head>
 
 <body
-  class="grid min-h-screen
+    class="grid min-h-screen
          [grid-template-areas:'header''main']
          md:[grid-template-areas:'header_header''sidebar_main']
          [grid-template-rows:auto_1fr]
@@ -30,287 +34,254 @@
          bg-gray-100 text-gray-900"
 >
 
-<!-- Progressive Enhancement: noscript fallback -->
-<noscript>
-  <div class="p-4 bg-yellow-100 text-yellow-800 text-center">
-    JavaScript is required for full functionality of this app.
-  </div>
-</noscript>
-
-<!-- 🔹 Top Navigation Header -->
-<header class="grid grid-cols-2 gap-4 p-4 bg-gray-900 text-gray-100 items-center" style="grid-area: header" role="banner">
-  <!-- 🔸 Left: Logo, dataset info, mobile menu -->
-  <div class="grid grid-cols-[auto_auto_1fr] items-center gap-4">
-
-    <!-- 📱 Mobile menu toggle -->
-    <div x-data="{ open: false }" class="relative md:hidden" @keydown.escape.window="open = false">
-      <button
-        @click="open = !open"
-        :aria-expanded="open.toString()"
-        aria-controls="mobile-menu"
-        aria-label="Open main menu"
-        class="text-xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        type="button"
-      >
-        ☰ <span class="sr-only">Open main menu</span>
-      </button>
-
-      <!-- 🔽 Dropdown -->
-      <div x-show="open"
-           x-transition:enter="transition ease-out duration-200"
-           x-transition:enter-start="opacity-0 scale-95"
-           x-transition:enter-end="opacity-100 scale-100"
-           x-transition:leave="transition ease-in duration-150"
-           x-transition:leave-start="opacity-100 scale-100"
-           x-transition:leave-end="opacity-0 scale-95"
-           @click.outside="open = false"
-           class="absolute left-0 mt-2 w-64 bg-white text-gray-800 rounded shadow-lg z-50 p-4"
-           id="mobile-menu"
-           x-cloak
-           role="dialog"
-           aria-modal="true"
-           aria-label="Mobile navigation"
-      >
-        <nav class="space-y-4 text-sm" aria-label="Mobile main navigation">
-          <details class="group">
-            <summary class="cursor-pointer text-xs font-bold text-gray-500 uppercase mb-1 focus:outline-none">📂 Data Access & Import</summary>
-            <div class="ml-2 space-y-1 mt-1">
-              <button class="block w-full text-left hover:underline" type="button">Import Files</button>
-              <button class="block w-full text-left hover:underline" type="button">Database Connect</button>
-              <button class="block w-full text-left hover:underline" type="button">NoSQL Connect</button>
-              <button class="block w-full text-left hover:underline" type="button">Cloud Storage</button>
-              <button class="block w-full text-left hover:underline" type="button">Google Sheets</button>
-              <button class="block w-full text-left hover:underline" type="button">API / Web Scraping</button>
-              <button class="block w-full text-left hover:underline" type="button">Streaming Sources</button>
+<!-- ===============================
+     HEADER: Navigation & Top Bar
+     =============================== -->
+<header
+    class="flex justify-between items-center
+           p-4 bg-gray-900 text-gray-100 shadow-lg
+           whitespace-nowrap overflow-x-auto"
+    style="grid-area: header"
+    role="banner"
+>
+    <!-- LEFT: Brand, Dataset, Mobile Menu -->
+    <div class="flex flex-row items-center gap-4 min-w-0 whitespace-nowrap">
+        <!-- MOBILE MENU BUTTON (Alpine.js controlled, only visible on mobile) -->
+        <div x-data="{ open: false }" class="relative md:hidden" @keydown.escape.window="open = false">
+            <button
+                @click="open = !open"
+                :aria-expanded="open.toString()"
+                aria-controls="mobile-menu"
+                aria-label="Open main menu"
+                class="text-xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                type="button"
+            >
+                ☰ <span class="sr-only">Open main menu</span>
+            </button>
+            <!-- MOBILE DROPDOWN MENU -->
+            <div x-show="open"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 @click.outside="open = false"
+                 class="absolute left-0 mt-2 w-64 bg-white text-gray-800 rounded shadow-lg z-50 p-4"
+                 id="mobile-menu"
+                 x-cloak
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="Mobile navigation"
+            >
+                <nav class="space-y-4 text-sm" aria-label="Mobile main navigation">
+                    <!-- Group: Data Access & Import -->
+                    <details class="group">
+                        <summary class="cursor-pointer text-xs font-bold text-gray-500 uppercase mb-1 focus:outline-none">
+                            📂 Data Access & Import
+                        </summary>
+                        <div class="ml-2 space-y-1 mt-1">
+                            <button class="block w-full text-left hover:underline" type="button">Import Files</button>
+                            <button class="block w-full text-left hover:underline" type="button">Database Connect</button>
+                            <button class="block w-full text-left hover:underline" type="button">NoSQL Connect</button>
+                            <button class="block w-full text-left hover:underline" type="button">Cloud Storage</button>
+                            <button class="block w-full text-left hover:underline" type="button">Google Sheets</button>
+                            <button class="block w-full text-left hover:underline" type="button">API / Web Scraping</button>
+                            <button class="block w-full text-left hover:underline" type="button">Streaming Sources</button>
+                        </div>
+                    </details>
+                    <!-- Group: Data Management -->
+                    <details class="group">
+                        <summary class="cursor-pointer text-xs font-bold text-gray-500 uppercase mb-1 focus:outline-none">
+                            🗃️ Data Management
+                        </summary>
+                        <div class="ml-2 space-y-1 mt-1">
+                            <button class="block w-full text-left hover:underline" type="button">Table & View Manager</button>
+                            <button class="block w-full text-left hover:underline" type="button">Schema Editor</button>
+                            <button class="block w-full text-left hover:underline" type="button">Type Inference</button>
+                            <button class="block w-full text-left hover:underline" type="button">Sampling</button>
+                            <button class="block w-full text-left hover:underline" type="button">Dataset Versioning</button>
+                            <button class="block w-full text-left hover:underline" type="button">Column Tags</button>
+                        </div>
+                    </details>
+                </nav>
             </div>
-          </details>
-          <details class="group">
-            <summary class="cursor-pointer text-xs font-bold text-gray-500 uppercase mb-1 focus:outline-none">🗃️ Data Management</summary>
-            <div class="ml-2 space-y-1 mt-1">
-              <button class="block w-full text-left hover:underline" type="button">Table & View Manager</button>
-              <button class="block w-full text-left hover:underline" type="button">Schema Editor</button>
-              <button class="block w-full text-left hover:underline" type="button">Type Inference</button>
-              <button class="block w-full text-left hover:underline" type="button">Sampling</button>
-              <button class="block w-full text-left hover:underline" type="button">Dataset Versioning</button>
-              <button class="block w-full text-left hover:underline" type="button">Column Tags</button>
-            </div>
-          </details>
-        </nav>
-      </div>
+        </div>
+        <!-- LOGO/LINK (hidden on mobile) -->
+        <a href="/"
+           class="hidden md:block text-xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+           aria-label="EdaMorph Home">
+           EdaMorph
+        </a>
+        <!-- DATA IMPORT/DATASET BADGE (Alpine.js/TS Widget) -->
+        <span x-data="datasetImportComponent()" class="flex items-center gap-2 min-w-0">
+            <!-- Loading State -->
+            <template x-if="loading">
+                <span class="text-blue-500 font-semibold animate-pulse">⏳ Loading...</span>
+            </template>
+            <!-- No dataset loaded: Show import button -->
+            <template x-if="!loading && !dataset">
+                <button
+                    class="text-blue-600 font-semibold hover:underline cursor-pointer bg-white px-2 py-1 rounded shadow border border-blue-200"
+                    @click="$refs.fileInput.click()"
+                    title="Import a dataset"
+                    type="button"
+                >
+                    {% if dataset_name %}
+                        <span>Click To Re-Import</span>
+                    {% else %}
+                        📂 Click to import data
+                    {% endif %}
+                </button>
+            </template>
+            <!-- Dataset badge -->
+            {% if dataset_name %}
+            <span
+                class="ml-2 max-w-[14rem] overflow-hidden text-ellipsis whitespace-nowrap
+                       text-xs font-semibold bg-gray-800 text-gray-100 border border-gray-700 rounded px-2 py-1
+                       transition-all duration-150 hidden md:block"
+                title="{{ dataset_name }}"
+            >
+                Dataset: {{ dataset_name }}
+            </span>
+            {% endif %}
+            <!-- Loaded dataset label (clickable) -->
+            <template x-if="!loading && dataset">
+                <a
+                    href="#"
+                    class="text-green-700 font-semibold hover:underline cursor-pointer"
+                    @click="$refs.fileInput.click()"
+                    :title="'Current dataset: ' + dataset + '. Click to change.'"
+                >
+                    📂 [[ dataset ]]
+                </a>
+            </template>
+            <!-- Hidden file input -->
+            <input
+                type="file"
+                class="hidden"
+                x-ref="fileInput"
+                accept=".csv,.parquet,.arrow,.tsv,.xlsx"
+                @change="handleFile"
+            />
+        </span>
     </div>
 
-    <!-- Logo (accessible as site home link) -->
-    <a href="/" class="hidden md:block text-xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="EdaMorph Home">
-      EdaMorph
-    </a>
-
-    <!-- 📂 Data Import & Info (Alpine.js Widget) -->
-    <span
-      x-data="importWidget()"
-      x-init="fetchCurrent()"
-      class="inline-block"
-    >
-      <template x-if="loading">
-        <span class="text-blue-500 font-semibold animate-pulse">⏳ Loading...</span>
-      </template>
-      <template x-if="!loading && !dataset">
+    <!-- RIGHT: Action Buttons -->
+    <div class="flex flex-row gap-3 items-center text-sm min-w-0 whitespace-nowrap">
         <button
-          class="text-blue-600 font-semibold hover:underline cursor-pointer bg-white px-2 py-1 rounded shadow border border-blue-200"
-          @click="$refs.fileInput.click()"
-          title="Import a dataset"
-          type="button"
+            title="Toggle Theme"
+            aria-label="Toggle light/dark theme"
+            class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+            type="button"
         >
-          📂 Click to import data
+            🌓 <span class="sr-only">Toggle theme</span>
         </button>
-      </template>
-      <template x-if="!loading && dataset">
-        <a
-          href="#"
-          class="text-green-700 font-semibold hover:underline cursor-pointer"
-          @click="$refs.fileInput.click()"
-          :title="'Current dataset: ' + dataset + '. Click to change.'"
+        <button
+            title="Help"
+            aria-label="Open help dialog"
+            class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+            type="button"
         >
-          📂 [[ dataset ]]
-        </a>
-      </template>
-      <input
-        type="file"
-        class="hidden"
-        x-ref="fileInput"
-        accept=".csv,.parquet,.arrow,.tsv,.xlsx"
-        @change="handleFile"
-      />
-    </span>
-    <script>
-  /**
-   * Alpine.js component for handling file import
-   * - Shows loading state
-   * - Fetches current dataset on init
-   * - Handles file upload to FastAPI backend
-   * - Redirects to "/" after successful import
-   */
-  function importWidget() {
-    return {
-      dataset: "",
-      loading: false,
-
-      // Fetch info about current dataset from the backend
-      fetchCurrent() {
-        this.loading = true;
-        fetch('/current_dataset')
-          .then(res => res.json())
-          .then(data => {
-            this.dataset = (data.loaded && data.name) ? data.name : "";
-          })
-          .finally(() => { this.loading = false; });
-      },
-
-      // Handle file upload and import
-      handleFile(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        this.loading = true;
-
-        // Prepare file for upload
-        const formData = new FormData();
-        formData.append("file", file);
-        // Optionally: formData.append("lazy", "true");
-
-        // POST file to FastAPI /import endpoint
-        fetch('/import', {
-          method: 'POST',
-          body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            this.dataset = data.name;
-            // Redirect to main page after successful import
-            window.location.href = "/";
-          } else {
-            alert(data.detail || "Import failed!");
-          }
-        })
-        .catch(() => alert("Import failed!"))
-        .finally(() => {
-          this.loading = false;
-          event.target.value = null; // allow re-import of same file
-        });
-      }
-    }
-  }
-</script>
-  </div>
-
-  <!-- 🔸 Right: Actions -->
-  <div class="flex gap-3 justify-end items-center text-sm w-auto">
-    <button
-      title="Toggle Theme"
-      aria-label="Toggle light/dark theme"
-      class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-      type="button"
-    >
-      🌓 <span class="sr-only">Toggle theme</span>
-    </button>
-    <button
-      title="Help"
-      aria-label="Open help dialog"
-      class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-      type="button"
-    >
-      Help
-    </button>
-    <button
-      title="Export"
-      aria-label="Export data"
-      class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-      type="button"
-    >
-      Export
-    </button>
-    <a href="/settings"
-      title="Settings"
-      aria-label="Open settings"
-      class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-      >⚙️ <span class="sr-only">Settings</span></a>
-  </div>
+            Help
+        </button>
+        <button
+            title="Export"
+            aria-label="Export data"
+            class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+            type="button"
+        >
+            Export
+        </button>
+        <a href="/settings"
+           title="Settings"
+           aria-label="Open settings"
+           class="hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+        >⚙️ <span class="sr-only">Settings</span></a>
+    </div>
 </header>
 
-<!-- 🔹 Main Content Area with Sidebar -->
+<!-- ===============================
+     MAIN LAYOUT: Sidebar & Content
+     =============================== -->
 <main class="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4" style="grid-area: main" role="main">
 
-  <!-- 🔹 Sidebar (Expandable sections) -->
-  <aside
-    class="hidden md:block bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4 text-sm overflow-y-auto"
-    aria-label="Sidebar"
-    role="complementary"
-  >
-    <!-- 📂 Data Access -->
-    <section class="mb-1" x-data="{ open: false }">
-      <button
-        @click="open = !open"
-        :aria-expanded="open.toString()"
-        aria-controls="sidebar-data-access"
-        class="w-full flex items-center justify-between text-xs font-bold text-gray-500 uppercase mb-2 hover:text-gray-700 dark:hover:text-gray-300 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        type="button"
-      >
-        📂 Data Access & Import
-        <span x-text="open ? '▾' : '▸'" class="text-gray-400 ml-1"></span>
-      </button>
-      <nav
-        x-show="open"
-        x-collapse
-        class="space-y-1 ml-2"
-        x-cloak
-        id="sidebar-data-access"
-        aria-label="Sidebar Data Access & Import"
-      >
-        <button class="block text-left hover:underline w-full" type="button">Import Files</button>
-        <button class="block text-left hover:underline w-full" type="button">Database Connect</button>
-        <button class="block text-left hover:underline w-full" type="button">NoSQL Connect</button>
-        <button class="block text-left hover:underline w-full" type="button">Cloud Storage</button>
-        <button class="block text-left hover:underline w-full" type="button">Google Sheets</button>
-        <button class="block text-left hover:underline w-full" type="button">API / Web Scraping</button>
-        <button class="block text-left hover:underline w-full" type="button">Streaming Sources</button>
-      </nav>
-    </section>
+    <!-- === SIDEBAR (Desktop only, collapsible groups) === -->
+    <aside
+        class="hidden md:block bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4 text-sm overflow-y-auto"
+        aria-label="Sidebar"
+        role="complementary"
+    >
+        <!-- ==== Data Access (Collapsible) ==== -->
+        <section class="mb-1" x-data="{ open: false }">
+            <button
+                @click="open = !open"
+                :aria-expanded="open.toString()"
+                aria-controls="sidebar-data-access"
+                class="w-full flex items-center justify-between text-xs font-bold text-gray-500 uppercase mb-2 hover:text-gray-700 dark:hover:text-gray-300 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                type="button"
+            >
+                📂 Data Access & Import
+                <span x-text="open ? '▾' : '▸'" class="text-gray-400 ml-1"></span>
+            </button>
+            <nav
+                x-show="open"
+                x-collapse
+                class="space-y-1 ml-2"
+                x-cloak
+                id="sidebar-data-access"
+                aria-label="Sidebar Data Access & Import"
+            >
+                <button class="block text-left hover:underline w-full" type="button">Import Files</button>
+                <button class="block text-left hover:underline w-full" type="button">Database Connect</button>
+                <button class="block text-left hover:underline w-full" type="button">NoSQL Connect</button>
+                <button class="block text-left hover:underline w-full" type="button">Cloud Storage</button>
+                <button class="block text-left hover:underline w-full" type="button">Google Sheets</button>
+                <button class="block text-left hover:underline w-full" type="button">API / Web Scraping</button>
+                <button class="block text-left hover:underline w-full" type="button">Streaming Sources</button>
+            </nav>
+        </section>
 
-    <!-- 🗃️ Data Management -->
-    <section class="mb-1" x-data="{ open: false }">
-      <button
-        @click="open = !open"
-        :aria-expanded="open.toString()"
-        aria-controls="sidebar-data-management"
-        class="w-full flex items-center justify-between text-xs font-bold text-gray-500 uppercase mb-2 hover:text-gray-700 dark:hover:text-gray-300 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        type="button"
-      >
-        🗃️ Data Management
-        <span x-text="open ? '▾' : '▸'" class="text-gray-400 ml-1"></span>
-      </button>
-      <nav
-        x-show="open"
-        x-collapse
-        class="space-y-1 ml-2"
-        x-cloak
-        id="sidebar-data-management"
-        aria-label="Sidebar Data Management"
-      >
-        <button class="block text-left hover:underline w-full" type="button">Table & View Manager</button>
-        <button class="block text-left hover:underline w-full" type="button">Schema Editor</button>
-        <button class="block text-left hover:underline w-full" type="button">Type Inference</button>
-        <button class="block text-left hover:underline w-full" type="button">Sampling</button>
-        <button class="block text-left hover:underline w-full" type="button">Dataset Versioning</button>
-        <button class="block text-left hover:underline w-full" type="button">Column Tags</button>
-      </nav>
-    </section>
-  </aside>
+        <!-- ==== Data Management (Collapsible) ==== -->
+        <section class="mb-1" x-data="{ open: false }">
+            <button
+                @click="open = !open"
+                :aria-expanded="open.toString()"
+                aria-controls="sidebar-data-management"
+                class="w-full flex items-center justify-between text-xs font-bold text-gray-500 uppercase mb-2 hover:text-gray-700 dark:hover:text-gray-300 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                type="button"
+            >
+                🗃️ Data Management
+                <span x-text="open ? '▾' : '▸'" class="text-gray-400 ml-1"></span>
+            </button>
+            <nav
+                x-show="open"
+                x-collapse
+                class="space-y-1 ml-2"
+                x-cloak
+                id="sidebar-data-management"
+                aria-label="Sidebar Data Management"
+            >
+                <button class="block text-left hover:underline w-full" type="button">Table & View Manager</button>
+                <button class="block text-left hover:underline w-full" type="button">Schema Editor</button>
+                <button class="block text-left hover:underline w-full" type="button">Type Inference</button>
+                <button class="block text-left hover:underline w-full" type="button">Sampling</button>
+                <button class="block text-left hover:underline w-full" type="button">Dataset Versioning</button>
+                <button class="block text-left hover:underline w-full" type="button">Column Tags</button>
+            </nav>
+        </section>
+    </aside>
 
-  <!-- 🔸 Main content block -->
-  <section class="bg-white rounded-md shadow-sm p-4 min-h-[300px] overflow-x-auto" tabindex="-1" aria-label="Main content area">
-    {% block content %}
-      <!-- Page content here -->
-    {% endblock %}
-  </section>
+    <!-- === MAIN CONTENT BLOCK === -->
+    <section
+        class="bg-white rounded-md shadow-sm p-4 min-h-[300px] overflow-x-auto"
+        tabindex="-1"
+        aria-label="Main content area"
+    >
+        {% block content %}
+        <!-- Page content here -->
+        {% endblock %}
+    </section>
 </main>
 </body>
 </html>

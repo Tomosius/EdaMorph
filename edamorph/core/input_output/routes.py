@@ -5,108 +5,74 @@ Handles CSV/file upload POSTs and info queries for frontend JS/HTMX.
 Supports Polars, Pandas, Arrow, and more in the future.
 """
 
+import os
+import tempfile
+
 # Polars is always optional, can add Pandas etc.
 import polars as pl
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
+
+from edamorph.core.input_output.utils import arrow_preview_stream
+from edamorph.session import session_state
 
 router = APIRouter(tags=["data-import"])
 
 
+# ... imports ...
+
 @router.post("/import")
 async def import_data(
         file: UploadFile = File(...),
-        lazy: bool = False
+        lazy: bool = False,
 ):
     """
-    Accepts a file upload and loads it into a DataFrame.
-    Updates global session_state, supporting Polars or others.
+    Handles file uploads and loads data into a DataFrame.
     """
     try:
-        # Use file extension to choose backend (for now)
         ext = file.filename.split(".")[-1].lower()
-        name = file.filename
-        file_path = name
+        df_name = file.filename  # Canonical display name
 
-        if ext in {"csv", "tsv"}:
-            # Use Polars for CSV, can expand to Pandas if you want
-            if lazy:
-                df = pl.scan_csv(file.file)
-            else:
-                # Workaround: file.file is a SpooledTemporaryFile, needs to be reset for each backend
+        # For temp path, use only if lazy
+        temp_path = None
+        if ext in {"csv", "tsv"} and lazy:
+            tempdir = tempfile.gettempdir()
+            temp_path = os.path.join(tempdir, df_name)
+            with open(temp_path, "wb") as out_file:
                 file.file.seek(0)
-                df = pl.read_csv(file.file)
-            backend = "polars"
-        elif ext in {"parquet"}:
+                out_file.write(file.file.read())
+            df = pl.scan_csv(temp_path)
+        elif ext in {"csv", "tsv"}:
+            file.file.seek(0)
+            df = pl.read_csv(file.file)
+        elif ext == "parquet":
             file.file.seek(0)
             df = pl.read_parquet(file.file)
-            backend = "polars"
         elif ext in {"arrow", "feather"}:
             file.file.seek(0)
             df = pl.read_ipc(file.file)
-            backend = "polars"
-        # TODO: add Pandas, Vaex, etc as needed here
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
 
-        # Store in session, can be universal!
+        # Store in session, always using explicit names
         session_state.set_df(
             df,
-            name=name,
-            path=file_path,
+            name=df_name,
+            path=temp_path,  # Only not None if lazy
             lazy=lazy,
         )
+
+        # Return fields matching session state
         return {
             "success": True,
-            "name": name,
-            "path": file_path,
+            "df_name": df_name,
+            "df_lazy": lazy,
             "shape": df.schema if lazy else getattr(df, "shape", None),
-            "lazy": lazy,
-            "backend": backend
+            "backend": "polars",
         }
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Import failed: {e}")
-
-
-@router.get("/current_dataset")
-def get_current_dataset_info():
-    df = getattr(session_state, "df", None)
-    if df is None:
-        return {"loaded": False}
-    # Universal backend detection (polars, pandas, pyarrow, etc)
-    from edamorph.core.input_output.utils import detect_dataframe_backend
-    backend = detect_dataframe_backend(df)
-    # Get info universal way
-    info = None
-    colnames = None
-    shape = None
-    try:
-        # Try Arrow table extraction for columns and shape
-        from edamorph.core.input_output.utils import to_arrow_table
-        arrow_tbl = to_arrow_table(df)
-        colnames = [field.name for field in arrow_tbl.schema]
-        shape = (arrow_tbl.num_rows, arrow_tbl.num_columns)
-        info = shape
-    except Exception:
-        # Fallbacks for Pandas/Polars
-        if hasattr(df, "shape"):
-            shape = df.shape
-        if hasattr(df, "columns"):
-            colnames = list(df.columns)
-        info = shape
-
-    return {
-        "loaded": True,
-        "name": getattr(session_state, "df_name", None),
-        "backend": backend,
-        "shape": shape,
-        "columns": colnames,
-        "info": info,
-    }
-
-
-from fastapi.responses import StreamingResponse
-from edamorph.session import session_state
-from edamorph.core.input_output.utils import arrow_preview_stream
 
 
 @router.get("/arrow_preview")
@@ -119,4 +85,4 @@ def arrow_preview():
         # Return empty IPC stream
         import io
         return StreamingResponse(io.BytesIO(), media_type="application/vnd.apache.arrow.stream")
-    return arrow_preview_stream(df, n_rows=10)  # Or any number you want!
+    return arrow_preview_stream(df)  # Or any number you want!
